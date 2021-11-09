@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">PhoneCallsTimeCounter</string>
+    <string name="phone_state">Нужен доступ к чтению состояния телефона</string>
+    <string name="rationale_ask_ok">Ok</string>
+    <string name="rationale_ask_cancel">Cancel</string>
+    <string name="never_ask">Never ask</string>
+    <string name="denied">Denied</string>
+    <string name="message">Give me access to READ_PHONE_STATE</string>
 </resources>

@@ -1,30 +1,34 @@
 package vaa.pingocean.phonecallstimecounter;
 
+import static java.security.AccessController.getContext;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.MotionEventCompat;
 
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.database.Cursor;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.provider.CallLog;
 import android.text.InputFilter;
 import android.text.Spanned;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.List;
-
 import core.Helper;
 import core.StatEntry;
 import core.utils.OnPhoneChangedListener;
 import core.utils.PhoneNumberTextWatcher;
+import core.utils.Utils;
 import io.michaelrocks.libphonenumber.android.NumberParseException;
 import io.michaelrocks.libphonenumber.android.PhoneNumberUtil;
 import io.michaelrocks.libphonenumber.android.Phonenumber;
@@ -40,12 +44,22 @@ import permissions.dispatcher.RuntimePermissions;
 public class MainActivity extends AppCompatActivity {
     PhoneNumberUtil mPhoneNumberUtil = null;
     String mLastEnteredPhone = "";
+    boolean ready = false;
+
+    EditText mEditTextValue;
+    EditText meditTextLastThreeDays;
+    EditText meditTextTotalCount;
+
+    private Rect mRect = new Rect();
 
     @NeedsPermission({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
     void readyForMonitoring() {
-        StatEntry resultNeeded = Helper.OutgoingTotalTime(this);
-        String result = Helper.getLastCall(this);
-        Toast.makeText(this, result, Toast.LENGTH_LONG).show();
+        if (!ready) Helper.getLastCall(this);
+        else {
+            Helper.OutgoingTotalTime(this);
+            meditTextTotalCount.setText("6892 secs");
+            meditTextLastThreeDays.setText("56892 secs");
+        }
     }
 
     @OnShowRationale({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
@@ -91,13 +105,41 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private View.OnTouchListener onTouchListener = new View.OnTouchListener() {
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+            final int action = MotionEventCompat.getActionMasked(event);
+
+            int[] location = new int[2];
+            mEditTextValue.getLocationOnScreen(location);
+            mRect.left = location[0];
+            mRect.top = location[1];
+            mRect.right = location[0] + mEditTextValue.getWidth();
+            mRect.bottom = location[1] + mEditTextValue.getHeight();
+
+            int x = (int) event.getX();
+            int y = (int) event.getY();
+
+            if (action == MotionEvent.ACTION_DOWN && !mRect.contains(x, y)) {
+                Utils.hideKeyboardFromFragment(MainActivity.this.getBaseContext(), mEditTextValue);
+            }
+            return false;
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        View contentView = (View) findViewById(R.id.mainView);
+        contentView.setOnTouchListener(onTouchListener);
+
         mPhoneNumberUtil = PhoneNumberUtil.createInstance(this);
         MainActivityPermissionsDispatcher.readyForMonitoringWithPermissionCheck(this);
-        EditText mEditTextValue = findViewById(R.id.editTextPhone);
+        mEditTextValue = findViewById(R.id.editTextPhone);
+        meditTextLastThreeDays = findViewById(R.id.editTextLastThreeDays);
+        meditTextTotalCount = findViewById(R.id.editTextTotalCount);
 
         PhoneNumberTextWatcher phoneNumberTextWatcher = new PhoneNumberTextWatcher(mOnPhoneChangedListener, getBaseContext());
         mEditTextValue.addTextChangedListener(phoneNumberTextWatcher);
@@ -122,9 +164,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void closeApplication(View view) {
+        Utils.hideKeyboardFromFragment(MainActivity.this.getBaseContext(), mEditTextValue);
         final Boolean[] cancelExit = {false};
         final AlertDialog.Builder dialog = new AlertDialog.Builder(this)
-                .setTitle("Leaving app in 3 secs")
+                .setTitle("Leaving app in 2 secs")
                 .setMessage("Application close shortly");
         dialog.setPositiveButton("Cancel",
                 new DialogInterface.OnClickListener() {
@@ -136,13 +179,13 @@ public class MainActivity extends AppCompatActivity {
         final AlertDialog alert = dialog.create();
         alert.show();
 
-        new CountDownTimer(2000, 1000) {
-            int cntDown = 2;
+        new CountDownTimer(1500, 500) {
+            int cntDown = 3;
 
             @Override
             public void onTick(long millisUntilFinished) {
                 cntDown = cntDown - 1;
-                alert.setTitle("Leaving app in " + cntDown + " secs");
+                alert.setTitle("Leaving app in " + cntDown + " half secs");
             }
 
             @Override
@@ -154,6 +197,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void checkPhoneState(View view) {
-        Toast.makeText(this, mLastEnteredPhone, Toast.LENGTH_SHORT).show();
+        Utils.hideKeyboardFromFragment(MainActivity.this.getBaseContext(), mEditTextValue);
+        if (mLastEnteredPhone.length() > 0) {
+            ready = true;
+            readyForMonitoring();
+        }
     }
 }

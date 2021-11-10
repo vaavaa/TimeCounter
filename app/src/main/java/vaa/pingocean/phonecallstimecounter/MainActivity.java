@@ -8,10 +8,13 @@ import android.app.AlertDialog;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.provider.CallLog;
+import android.view.View;
 import android.widget.Toast;
 
 import java.util.List;
 
+import core.Helper;
+import core.StatEntry;
 import permissions.dispatcher.NeedsPermission;
 import permissions.dispatcher.OnNeverAskAgain;
 import permissions.dispatcher.OnPermissionDenied;
@@ -22,16 +25,17 @@ import permissions.dispatcher.RuntimePermissions;
 
 @RuntimePermissions
 public class MainActivity extends AppCompatActivity {
-    final int PHONE_STATE = 98;
-    final int READ_STORAGE_PERMISSION_REQUEST = 99;
 
-    @NeedsPermission({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG})
-    void showCamera() {
-        LastCall();
+    @NeedsPermission({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
+    void readyForMonitoring() {
+
+        StatEntry resultNeeded = Helper.OutgoingTotalTime(this);
+        String result = Helper.getLastCall(this);
+        Toast.makeText(this, result, Toast.LENGTH_LONG).show();
     }
 
-    @OnShowRationale({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG})
-    void showRationaleForCamera(final PermissionRequest request) {
+    @OnShowRationale({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
+    void showRationaleForState(final PermissionRequest request) {
 
         new AlertDialog.Builder(this)
                 .setMessage(R.string.message)
@@ -42,13 +46,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @OnPermissionDenied({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG})
-    void showDeniedForCamera() {
+    @OnPermissionDenied({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
+    void showDeniedForState() {
         Toast.makeText(this, R.string.denied, Toast.LENGTH_SHORT).show();
     }
 
-    @OnNeverAskAgain({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG})
-    void showNeverAskForCamera() {
+    @OnNeverAskAgain({Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.WRITE_CALL_LOG})
+    void showNeverAskForState() {
         Toast.makeText(this, R.string.never_ask, Toast.LENGTH_SHORT).show();
     }
 
@@ -65,24 +69,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        MainActivityPermissionsDispatcher.showCameraWithPermissionCheck(this);
+        MainActivityPermissionsDispatcher.readyForMonitoringWithPermissionCheck(this);
     }
 
-    public String LastCall() {
-        StringBuffer sb = new StringBuffer();
-        Cursor cur = getContentResolver().query(CallLog.Calls.CONTENT_URI, null, null, null, android.provider.CallLog.Calls.DATE + " DESC");
-
-        int number = cur.getColumnIndex(CallLog.Calls.NUMBER);
-        int duration = cur.getColumnIndex(CallLog.Calls.DURATION);
-        sb.append("Call Details : \n");
-        while (cur.moveToNext()) {
-            String phNumber = cur.getString(number);
-            String callDuration = cur.getString(duration);
-            sb.append("\nPhone Number:" + phNumber);
-            break;
-        }
-        cur.close();
-        String str = sb.toString();
-        return str;
+    public void closeApplication(View view) {
+        this.finish();
+        System.exit(0);
     }
 }

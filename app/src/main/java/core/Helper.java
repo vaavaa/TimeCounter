@@ -12,76 +12,41 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 public class Helper {
-    public static StatEntry OutgoingTotalTime(Activity activity) {
+    public static StatEntry OutgoingCallsTime(Activity activity, String phoneNumber, int action) {
 
-        Date currentDate = new Date();
         Calendar calendarTo = Calendar.getInstance();
         Calendar calendarFrom = Calendar.getInstance();
         calendarTo.add(Calendar.DATE, -3);
 
-        Map<String, StatEntry> callLogMap1 = new HashMap<>();
+        String strOrder = android.provider.CallLog.Calls.DATE + " DESC";
+        String selection3Days = android.provider.CallLog.Calls.DATE + " BETWEEN ? AND ?";
+        String selection = null;
+        String[] whereValue = null;
 
-        String[] whereValue = new String[]{String.valueOf(calendarTo.getTimeInMillis()), String.valueOf(calendarFrom.getTimeInMillis())};
-        String strOrder = android.provider.CallLog.Calls.DATE + " DESC limit 50";
+        if (action == 1) {
+            selection = selection3Days;
+            whereValue = new String[]{String.valueOf(calendarTo.getTimeInMillis()), String.valueOf(calendarFrom.getTimeInMillis())};
+        }
 
         Cursor cur = activity.getContentResolver()
-                .query(CallLog.Calls.CONTENT_URI, null, android.provider.CallLog.Calls.DATE + " BETWEEN ? AND ?", whereValue, strOrder);
+                .query(CallLog.Calls.CONTENT_URI, null, selection, whereValue, strOrder);
 
-        StatEntry StatEntry1 = null;
+        StatEntry statEntry = new StatEntry();
+        statEntry.setTitle(phoneNumber);
 
         if (cur != null) {
             try {
                 while (cur.moveToNext()) {
 
                     String callNumber = cur.getString(cur.getColumnIndex(android.provider.CallLog.Calls.NUMBER));
-                    //    String callDate = cur.getString(cur.getColumnIndex(android.provider.CallLog.Calls.DATE));
-                    int duration = cur.getInt(cur.getColumnIndex(android.provider.CallLog.Calls.DURATION));
-
-                    String name = cur.getString(cur.getColumnIndex(CallLog.Calls.CACHED_NAME));
-
-
-                    int id = cur.getInt(cur.getColumnIndex(CallLog.Calls._ID));
-
-                    int type = cur.getInt(cur.getColumnIndex(CallLog.Calls.TYPE));
-
-                    if (callNumber != null & duration > 0 && (type == 1 || type == 2)) {
-
-                        int n = callNumber.length();
-                        String lastDigits;
-                        String number = callNumber.replaceAll(Pattern.quote("+"), ""); //replacing the plus
-                        //am just checking last 5digitis and saving to map so that we can get same //number duration
-                        if (n >= 5) {
-                            try {
-
-                                lastDigits = String.valueOf(Long.parseLong(number) % 100000);
-                            } catch (NumberFormatException e) {
-                                e.printStackTrace();
-                                lastDigits = callNumber;
-                            }
-                        } else {
-                            lastDigits = callNumber;
-                        }
-
-                        if (callLogMap1.containsKey(lastDigits)) {
-                            StatEntry1 = callLogMap1.get(callNumber);
-
-                            if (StatEntry1 != null) StatEntry1.setTitle(callNumber);
-                            if (StatEntry1 != null) StatEntry1.Duration += duration;
-
-
-                        } else {
-                            StatEntry1 = new StatEntry();
-
-                            StatEntry1.setTitle(callNumber);
-
-                            StatEntry1.Duration += duration;
-                        }
-
-
-                        if (StatEntry1 != null) StatEntry1.setTime((StatEntry1.Duration) / 60);
-                        callLogMap1.put(callNumber, StatEntry1);
-
-
+                    if (callNumber != null & phoneNumber.equals(callNumber)) {
+                        //String callDate = cur.getString(cur.getColumnIndex(android.provider.CallLog.Calls.DATE));
+                        int duration = cur.getInt(cur.getColumnIndex(android.provider.CallLog.Calls.DURATION));
+                        //String name = cur.getString(cur.getColumnIndex(CallLog.Calls.CACHED_NAME));
+                        //int id = cur.getInt(cur.getColumnIndex(CallLog.Calls._ID));
+                        int type = cur.getInt(cur.getColumnIndex(CallLog.Calls.TYPE));
+                        if (duration > 0 && (type == 1 || type == 2))
+                            statEntry.Duration += duration;
                     }
                 }
 
@@ -93,7 +58,7 @@ public class Helper {
                 cur.close();
             }
         }
-        return StatEntry1;
+        return statEntry;
     }
 
     public static String getLastCall(Activity activity) {
@@ -148,7 +113,7 @@ public class Helper {
                 break;
         }
 
-        if(dir.equals("OUTGOING")){
+        if (dir.equals("OUTGOING")) {
             //whatever you want here
             return "yes";
         }

@@ -56,9 +56,11 @@ public class MainActivity extends AppCompatActivity {
     void readyForMonitoring() {
         if (!ready) Helper.getLastCall(this);
         else {
-            Helper.OutgoingTotalTime(this);
-            meditTextTotalCount.setText("6892 secs");
-            meditTextLastThreeDays.setText("56892 secs");
+
+            StatEntry day3Times = Helper.OutgoingCallsTime(this, mLastEnteredPhone.replace(" ",""), 1);
+            StatEntry allTimes = Helper.OutgoingCallsTime(this, mLastEnteredPhone.replace(" ",""), 0);
+            meditTextTotalCount.setText( allTimes.getDuration() + " secs");
+            meditTextLastThreeDays.setText( day3Times.getDuration() + " secs");
         }
     }
 

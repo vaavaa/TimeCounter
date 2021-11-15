@@ -205,4 +205,8 @@ public class MainActivity extends AppCompatActivity {
             readyForMonitoring();
         }
     }
+
+    public void clearPhone(View view) {
+        mEditTextValue.setText("");
+    }
 }
